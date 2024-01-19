@@ -47,7 +47,9 @@ class ClassificationModule(L.LightningModule):
         return loss
 
     def on_train_epoch_end(self):
+        print("before compute")
         metrics = self.train_metrics.compute()
+        print("after compute")
         for metric_name, metric_value in metrics.items():
             self.log(
                 f"train/{metric_name}",
