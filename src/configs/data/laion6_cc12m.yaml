@@ -1,0 +1,44 @@
+full_batch_size: 256
+full_val_batch_size: 200
+text_tokens_dim: 2048
+size: 32
+name: LAION6+_CC12M
+
+train_dataset:
+  _partial_: true
+  _target_: utils.text_data.TextWebDataset
+  root: ${data_dir}/cc12m/train ${data_dir}/laion_aesthetics_6.0
+  train: true
+  text_embedding_name: flan_t5_xl
+  vae_embedding_name: vae_embeddings_256
+  return_image: False
+  return_text: False
+  min_image_size: 256
+  bin_confidence: True
+  num_bins: 15
+  clip_filter_threshold: 0.0
+  
+val_dataset:
+  _partial_: true
+  _target_: utils.text_data.TextDataset
+  root: ${data_dir}/cc12m/val #${data_dir}/coco_10k
+  text_embedding_name: flan_t5_xl
+  vae_embedding_name: vae_embeddings_256
+  return_image: False
+  return_text: False
+
+collate_fn:
+  _target_: utils.datamodule.dict_collate_and_pad
+  keys_to_pad:
+    - flan_t5_xl
+  max_length: 256
+
+datamodule:
+  _target_: utils.datamodule.WebdatasetDataModule
+  train_dataset: ${data.train_dataset}
+  val_dataset: ${data.val_dataset}
+  full_batch_size: ${data.full_batch_size}
+  num_workers: ${computer.num_workers}
+  collate_fn: ${data.collate_fn}
+  num_nodes: ${computer.num_nodes}
+  num_devices: ${computer.devices}

@@ -165,5 +165,6 @@ checkpoints/
 wandb/
 outputs/
 datasets/*
+!datasets/text_prompt_testbed
 /logs/
 /checkpoints/

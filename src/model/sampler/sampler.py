@@ -1,18 +1,23 @@
 import einops
 import torch
 
+
 def linear_schedule(t):
-    return torch.clamp(t, 1e-6, 1.-1e-6)
+    return torch.clamp(t, 1e-6, 1.0 - 1e-6)
+
 
 def cosine_schedule(t):
-    t = torch.cos((1-t) * torch.pi / 2)
-    return torch.clamp(t, 1e-6, 1.-1e-6)
+    t = torch.cos((1 - t) * torch.pi / 2)
+    return torch.clamp(t, 1e-6, 1.0 - 1e-6)
+
 
 def sigmoid_schedule(t):
-    t = torch.sigmoid(-3. + 6*t)
+    t = torch.sigmoid(-3.0 + 6 * t)
     o = torch.tensor(1)
-    t = (t-torch.sigmoid(-3.*o))/(torch.sigmoid(3.*o)-torch.sigmoid(-3.*o))
-    return torch.clamp(t, 1e-6, 1.-1e-6)
+    t = (t - torch.sigmoid(-3.0 * o)) / (
+        torch.sigmoid(3.0 * o) - torch.sigmoid(-3.0 * o)
+    )
+    return torch.clamp(t, 1e-6, 1.0 - 1e-6)
     # start = -1
     # end = 3
     # tau = 0.5
@@ -20,14 +25,16 @@ def sigmoid_schedule(t):
     # v_end = torch.sigmoid(torch.tensor(end/tau))
     # return 1 - (v_end - torch.sigmoid((t*(end-start) + start))/tau)/(v_end - v_start)
 
+
 def karras_schedule(t):
     sigma_min = 1e-2
     sigma_max = 2
-    rho = 7.
+    rho = 7.0
     min_inv_rho = sigma_min ** (1 / rho)
     max_inv_rho = sigma_max ** (1 / rho)
-    t = 1-(max_inv_rho + t * (min_inv_rho - max_inv_rho)) ** rho
-    return torch.clamp(t, 1e-6, 1.-1e-6)
+    t = 1 - (max_inv_rho + t * (min_inv_rho - max_inv_rho)) ** rho
+    return torch.clamp(t, 1e-6, 1.0 - 1e-6)
+
 
 # adapted from N Dufour
 class SigmoidScheduler:
@@ -41,19 +48,15 @@ class SigmoidScheduler:
         self.v_end = torch.sigmoid(torch.tensor(self.end / self.tau))
 
     def __call__(self, t):
-        output = 1-(
+        output = 1 - (
             -torch.sigmoid((t * (self.end - self.start) + self.start) / self.tau)
             + self.v_end
         ) / (self.v_end - self.v_start)
         return torch.clamp(output, min=self.clip_min, max=1.0)
 
 
-
-class DDIMLinearScheduler():
-    def __init__(self,
-                 n_timesteps,
-                 schedule = linear_schedule,
-                 clip_img_pred=False):
+class DDIMLinearScheduler:
+    def __init__(self, n_timesteps, schedule=linear_schedule, clip_img_pred=False):
         self.train_timesteps = n_timesteps
         self.timesteps = None
         self.schedule = schedule
@@ -61,8 +64,8 @@ class DDIMLinearScheduler():
 
     def add_noise(self, x, noise, t):
         t = torch.clamp(t, 0, self.train_timesteps)
-        sigma = self.schedule(t/self.train_timesteps).view(x.shape[0], 1, 1, 1)
-        return torch.sqrt(1-sigma)*x + torch.sqrt(sigma)*noise
+        sigma = self.schedule(t / self.train_timesteps).view(x.shape[0], 1, 1, 1)
+        return torch.sqrt(1 - sigma) * x + torch.sqrt(sigma) * noise
 
     def set_timesteps(self, num_inference_steps):
         timesteps = torch.linspace(0, self.train_timesteps, num_inference_steps)
@@ -72,22 +75,24 @@ class DDIMLinearScheduler():
     def step(self, noise_pred, t, samples):
         b, c, h, w = samples.shape
         # pred x0
-        sigma = self.schedule(t.clamp(0, self.train_timesteps-1)/self.train_timesteps).view(b, 1, 1, 1)
+        sigma = self.schedule(
+            t.clamp(0, self.train_timesteps - 1) / self.train_timesteps
+        ).view(b, 1, 1, 1)
         x_0 = (samples - torch.sqrt(sigma) * noise_pred) / torch.sqrt(1 - sigma)
         if self.clip_img_pred:
             x_0 = x_0.clamp(-1, 1)
         # recompute sample at previous step
-        t = t - self.train_timesteps/self.num_inference_steps
-        sigma = self.schedule(t.clamp(0, self.train_timesteps-1)/self.train_timesteps).view(b, 1, 1, 1)
+        t = t - self.train_timesteps / self.num_inference_steps
+        sigma = self.schedule(
+            t.clamp(0, self.train_timesteps - 1) / self.train_timesteps
+        ).view(b, 1, 1, 1)
         samples = torch.sqrt(1 - sigma) * x_0 + torch.sqrt(sigma) * noise_pred
         # samples.clamp(-1, 1.)
         return samples, x_0
 
-class DDPMLinearScheduler():
-    def __init__(self,
-                 n_timesteps,
-                 schedule = linear_schedule,
-                 clip_img_pred=False):
+
+class DDPMLinearScheduler:
+    def __init__(self, n_timesteps, schedule=linear_schedule, clip_img_pred=False):
         self.train_timesteps = n_timesteps
         self.timesteps = None
         self.schedule = schedule
@@ -95,8 +100,8 @@ class DDPMLinearScheduler():
 
     def add_noise(self, x, noise, t):
         t = torch.clamp(t, 0, self.train_timesteps)
-        sigma = self.schedule(t/self.train_timesteps).view(x.shape[0], 1, 1, 1)
-        return torch.sqrt(1-sigma)*x + torch.sqrt(sigma)*noise
+        sigma = self.schedule(t / self.train_timesteps).view(x.shape[0], 1, 1, 1)
+        return torch.sqrt(1 - sigma) * x + torch.sqrt(sigma) * noise
 
     def set_timesteps(self, num_inference_steps):
         timesteps = torch.linspace(0, self.train_timesteps, num_inference_steps)
@@ -105,17 +110,25 @@ class DDPMLinearScheduler():
 
     def step(self, noise_pred, t, samples):
         b, c, h, w = samples.shape
-        sigma_now = self.schedule(t.clamp(0, self.train_timesteps - 1) / self.train_timesteps).view(b, 1, 1, 1)
-        x_pred = (samples - torch.sqrt(sigma_now) * noise_pred) / torch.sqrt(1-sigma_now)
+        sigma_now = self.schedule(
+            t.clamp(0, self.train_timesteps - 1) / self.train_timesteps
+        ).view(b, 1, 1, 1)
+        x_pred = (samples - torch.sqrt(sigma_now) * noise_pred) / torch.sqrt(
+            1 - sigma_now
+        )
         if self.clip_img_pred:
             x_pred = torch.clamp(x_pred, -1, 1)
-            noise_est = (samples - torch.sqrt(1-sigma_now) * x_pred) / torch.sqrt(sigma_now)
+            noise_est = (samples - torch.sqrt(1 - sigma_now) * x_pred) / torch.sqrt(
+                sigma_now
+            )
         else:
             noise_est = noise_pred
 
-        t = t - self.train_timesteps/self.num_inference_steps
-        sigma_next = self.schedule(t.clamp(0, self.train_timesteps-1)/self.train_timesteps).view(b, 1, 1, 1)
-        log_alpha_t = torch.log(1-sigma_now) - torch.log(1-sigma_next)
+        t = t - self.train_timesteps / self.num_inference_steps
+        sigma_next = self.schedule(
+            t.clamp(0, self.train_timesteps - 1) / self.train_timesteps
+        ).view(b, 1, 1, 1)
+        log_alpha_t = torch.log(1 - sigma_now) - torch.log(1 - sigma_next)
         alpha_t = torch.clip(torch.exp(log_alpha_t), 0, 1)
         x_mean = torch.rsqrt(alpha_t) * (
             samples - torch.rsqrt(sigma_now) * (1 - alpha_t) * noise_est
@@ -126,17 +139,15 @@ class DDPMLinearScheduler():
         return x_next, x_pred
 
 
-
-class DiTPipeline():
+class DiTPipeline:
     def __init__(
-            self,
-            model,
-            scheduler,
+        self,
+        model,
+        scheduler,
     ):
         super().__init__()
         self.model = model
         self.scheduler = scheduler
-
 
     @torch.no_grad()
     def __call__(
@@ -155,7 +166,7 @@ class DiTPipeline():
 
         # set step values
         self.scheduler.set_timesteps(num_inference_steps)
-        for t in (self.scheduler.timesteps):
+        for t in self.scheduler.timesteps:
             timesteps = t
             # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
             timesteps = timesteps.expand(batch_size).to(device)
@@ -170,13 +181,22 @@ class DiTPipeline():
         return samples
 
     @torch.no_grad()
-    def sample_cfg(self, samples, class_labels, cfg, device, num_inference_steps: int = 50, step_callback = None, cfg_scheduler=None):
+    def sample_cfg(
+        self,
+        samples,
+        class_labels,
+        cfg,
+        device,
+        num_inference_steps: int = 50,
+        step_callback=None,
+        cfg_scheduler=None,
+    ):
         batch_size = len(class_labels)
         class_labels = class_labels.to(device)
 
         # set step values
         self.scheduler.set_timesteps(num_inference_steps)
-        for t in (self.scheduler.timesteps):
+        for t in self.scheduler.timesteps:
             timesteps = t
             # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
             timesteps = timesteps.expand(batch_size).to(device)
@@ -189,10 +209,10 @@ class DiTPipeline():
             noise_pred = self.model(x_input, time=t_input, cls=c_input)
             eps_c = noise_pred[0:batch_size, ...]
             eps_u = noise_pred[batch_size:, ...]
-            w = 1.
+            w = 1.0
             if cfg_scheduler is not None:
-                w = cfg_scheduler(t/self.scheduler.train_timesteps)
-            eps = eps_c + w*cfg*(eps_c - eps_u)
+                w = cfg_scheduler(t / self.scheduler.train_timesteps)
+            eps = eps_c + w * cfg * (eps_c - eps_u)
             # compute previous image: x_t -> x_t-1
             samples, x_0 = self.scheduler.step(eps, timesteps, samples)
             if step_callback is not None:
@@ -201,12 +221,182 @@ class DiTPipeline():
         # samples = (samples / 2 + 0.5).clamp(0, 1)
         return samples
 
+
+class TextDiTPipeline:
+    def __init__(
+        self,
+        model,
+        scheduler,
+    ):
+        super().__init__()
+        self.model = model
+        self.scheduler = scheduler
+
+    @torch.no_grad()
+    def __call__(
+        self,
+        samples,
+        text_tokens,
+        text_mask,
+        device,
+        num_inference_steps: int = 50,
+        step_callback=None,
+    ):
+
+        batch_size = len(text_tokens)
+        im_size = self.model.im_size
+        text_tokens = text_tokens.to(device)
+        text_mask = text_mask.to(device)
+
+        # set step values
+        self.scheduler.set_timesteps(num_inference_steps)
+        for t in self.scheduler.timesteps:
+            timesteps = t
+            # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
+            timesteps = timesteps.expand(batch_size).to(device)
+            # predict noise model_output
+            noise_pred = self.model(
+                samples,
+                time=timesteps,
+                text_tokens=text_tokens,
+                text_tokens_mask=text_mask,
+                confidence=torch.ones(batch_size, device=device, dtype=torch.float),
+            )
+            # compute previous image: x_t -> x_t-1
+            samples, x_0 = self.scheduler.step(noise_pred, timesteps, samples)
+            if step_callback is not None:
+                step_callback(t, samples, x_0, noise_pred)
+
+        # samples = (samples / 2 + 0.5).clamp(0, 1)
+        return samples
+
+    @torch.no_grad()
+    def sample_cfg(
+        self,
+        samples,
+        text_tokens,
+        text_mask,
+        uncond_text_tokens,
+        cfg,
+        device,
+        num_inference_steps: int = 50,
+        step_callback=None,
+        cfg_scheduler=None,
+    ):
+        batch_size = len(text_tokens)
+        text_tokens = text_tokens.to(device)
+        text_mask = text_mask.to(device)
+        uncond_text_tokens = uncond_text_tokens.to(device)
+        uncond_mask = torch.ones(
+            uncond_text_tokens.shape[0],
+            device=device,
+            dtype=torch.bool,
+        )
+        if uncond_mask.shape[0] > text_mask.shape[1]:
+            text_tokens = torch.cat(
+                [
+                    text_tokens,
+                    torch.zeros(
+                        text_tokens.shape[0],
+                        uncond_text_tokens.shape[0] - text_tokens.shape[1],
+                        text_tokens.shape[2],
+                        device=device,
+                        dtype=torch.float,
+                    ),
+                ],
+                dim=1,
+            )
+            text_mask = torch.cat(
+                [
+                    text_mask,
+                    torch.zeros(
+                        text_mask.shape[0],
+                        uncond_mask.shape[0] - text_mask.shape[1],
+                        device=device,
+                        dtype=torch.bool,
+                    ),
+                ],
+                dim=1,
+            )
+        elif uncond_mask.shape[0] < text_mask.shape[1]:
+            uncond_text_tokens = torch.cat(
+                [
+                    uncond_text_tokens,
+                    torch.zeros(
+                        text_tokens.shape[1] - uncond_text_tokens.shape[0],
+                        uncond_text_tokens.shape[1],
+                        device=device,
+                        dtype=torch.float,
+                    ),
+                ],
+                dim=0,
+            )
+            uncond_mask = torch.cat(
+                [
+                    uncond_mask,
+                    torch.zeros(
+                        text_mask.shape[1] - uncond_mask.shape[0],
+                        device=device,
+                        dtype=torch.bool,
+                    ),
+                ],
+                dim=0,
+            )
+        # set step values
+        self.scheduler.set_timesteps(num_inference_steps)
+        for t in self.scheduler.timesteps:
+            timesteps = t
+            # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
+            timesteps = timesteps.expand(batch_size).to(device)
+            # duplicate all
+            x_input = torch.cat([samples, samples], dim=0).to(device)
+            t_input = torch.cat([timesteps, timesteps], dim=0).to(device)
+            text_tokens_input = torch.cat(
+                [text_tokens, uncond_text_tokens.repeat(batch_size, 1, 1)], dim=0
+            ).to(device)
+            text_mask_input = torch.cat(
+                [text_mask, uncond_mask.repeat(batch_size, 1)], dim=0
+            )
+            confidence_input = torch.cat(
+                [
+                    torch.ones(batch_size, device=device, dtype=torch.float),
+                    torch.zeros(batch_size, device=device, dtype=torch.float),
+                ],
+                dim=0,
+            )
+
+            # predict noise model_output
+            noise_pred = self.model(
+                x_input,
+                time=t_input,
+                text_tokens=text_tokens_input,
+                text_tokens_mask=text_mask_input,
+                confidence=confidence_input,
+            )
+            eps_c, eps_u = noise_pred.chunk(2, dim=0)
+            w = 1.0
+            if cfg_scheduler is not None:
+                w = cfg_scheduler(t / self.scheduler.train_timesteps)
+            eps = eps_c + w * cfg * (eps_c - eps_u)
+            # compute previous image: x_t -> x_t-1
+            samples, x_0 = self.scheduler.step(eps, timesteps, samples)
+            if step_callback is not None:
+                step_callback(t, samples, x_0, noise_pred)
+
+        # samples = (samples / 2 + 0.5).clamp(0, 1)
+        return samples
+
+
 ##  cfg sched
 
-def linear(t):
-    return 1-t
-def clamp_linear(c=0.1):
-    return lambda t: torch.clamp_min_(1-t, c)
-def trunc_linear(c=0.1):
-    return lambda t: (1-t)*((1-t)>c)
 
+def linear(t):
+    return 1 - t
+
+
+def clamp_linear(c=0.1):
+    return lambda t: torch.clamp_min_(1 - t, c)
+
+
+def trunc_linear(c=0.1):
+    return lambda t: (1 - t) * ((1 - t) > c)
