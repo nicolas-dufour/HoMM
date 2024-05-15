@@ -92,8 +92,8 @@ class JeanZayExperiment:
 #SBATCH --hint=nomultithread      
 #SBATCH --time={self.time}
 {"#SBATCH --time-min=" + self.min_time if self.min_time is not None else ""}
-#SBATCH --output=/gpfswork/rech/syq/uey53ph/diffusion/{local_slurmfolder}/job_%j.out
-#SBATCH --error=/gpfswork/rech/syq/uey53ph/diffusion/{local_slurmfolder}/job_%j.err
+#SBATCH --output=/gpfswork/rech/syq/uey53ph/HoMM/{local_slurmfolder}/job_%j.out
+#SBATCH --error=/gpfswork/rech/syq/uey53ph/HoMM/{local_slurmfolder}/job_%j.err
 #SBATCH --signal=SIGUSR1@20
 module purge
 {"module load cpuarch/amd" if self.gpu_type == "a100" else ""}
