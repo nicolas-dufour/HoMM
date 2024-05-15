@@ -25,6 +25,7 @@ jz_exp.qos = "t3"
 jz_exp.account = "syq"
 jz_exp.gpu_type = "a100"
 jz_exp.time = "20:00:00"
+jz_exp.cmd_path = "src/train_txt2img.py"
 
 exps.append(jz_exp)
 
