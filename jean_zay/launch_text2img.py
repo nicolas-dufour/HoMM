@@ -31,7 +31,7 @@ exps.append(jz_exp)
 
 trainer_modifiers = {
     "experiment_name_suffix": exp_name,
-    "computer": "cluster-node-a100.yaml",
+    "computer": "4-gpu.yaml",
     "computer.devices": jz_exp.num_gpus_per_node,
     "computer.progress_bar_refresh_rate": 10,
     "computer.num_nodes": jz_exp.nodes,
@@ -40,7 +40,7 @@ trainer_modifiers = {
 
 exp_modifier = {
     "load_weight_from_checkpoint": "/gpfswork/rech/syq/uey53ph/HoMM/checkpoints/256_DiHpp_L2_ft211k.ckpt",
-    "data.full_batch_size": 64,
+    "data.full_batch_size": 1024,
     "model.network.im_size": 32,
     "model.network.input_dim": 4,
     "model.network.dim": 1024,
@@ -58,7 +58,6 @@ exp_modifier = {
     "trainer.max_steps": 4001000,
     "model/lr_scheduler": "warmup",
     "model.lr_scheduler.warmup_steps": 10000,
-    "computer.num_workers": 10,
     "computer.precision": "16-mixed",
     "computer.num_nodes": 2,
     "computer.devices": 8,

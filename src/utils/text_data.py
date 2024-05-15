@@ -150,7 +150,7 @@ class TextWebDataset(wds.DataPipeline):
                     wds.WebDataset(dataset_tar_files).shuffle(1000).to_tuple("json")
                 )
                 confidences = []
-                MAX_SAMPLES_BIN_ESTIMATION = 100  # 100000
+                MAX_SAMPLES_BIN_ESTIMATION = 100000
                 for i, (metadata,) in enumerate(tqdm(dataset_for_confidence)):
                     metadata = json.loads(metadata)
                     if i > MAX_SAMPLES_BIN_ESTIMATION:
