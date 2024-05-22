@@ -57,7 +57,6 @@ def train(cfg):
         monitor=["train/loss"],
     )
 
-
     callbacks = [
         checkpoint_callback,
         progress_bar,
@@ -75,11 +74,16 @@ def train(cfg):
         callbacks=callbacks,
     )
 
-    #load weights
-    if cfg.load_weight_from_checkpoint is not None:
-        print('loading weights from {}'.format(cfg.load_weight_from_checkpoint))
-        sd = torch.load(cfg.load_weight_from_checkpoint, map_location=torch.device('cpu'))
-        state_dict = sd['state_dict']
+    # load weights
+    if (
+        cfg.load_weight_from_checkpoint is not None
+        and not (Path(cfg.checkpoints.dirpath) / Path("last.ckpt")).exists()
+    ):
+        print("loading weights from {}".format(cfg.load_weight_from_checkpoint))
+        sd = torch.load(
+            cfg.load_weight_from_checkpoint, map_location=torch.device("cpu")
+        )
+        state_dict = sd["state_dict"]
         module_state_dict = state_dict
         # for key, value in state_dict.items():
         #     if key.startswith('model._orig_mod.'):

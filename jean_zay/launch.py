@@ -97,7 +97,7 @@ class JeanZayExperiment:
 #SBATCH --signal=SIGUSR1@20
 module purge
 {"module load cpuarch/amd" if self.gpu_type == "a100" else ""}
-module load pytorch-gpu/py3/2.1.1
+module load pytorch-gpu/py3/2.2.0
 source /linkhome/rech/genlgm01/uey53ph/.venvs/diffusion/bin/activate
 
 export PYTHONPATH=/linkhome/rech/genlgm01/uey53ph/.venvs/diffusion/bin/python
