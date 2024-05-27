@@ -98,7 +98,7 @@ class JeanZayExperiment:
 module purge
 {"module load cpuarch/amd" if self.gpu_type == "a100" else ""}
 module load pytorch-gpu/py3/2.2.0
-source /linkhome/rech/genlgm01/uey53ph/.venvs/diffusion/bin/activate
+source /linkhome/rech/genlgm01/uey53ph/.venvs/homm/bin/activate
 
 export PYTHONPATH=/linkhome/rech/genlgm01/uey53ph/.venvs/diffusion/bin/python
 export TRANSFORMERS_OFFLINE=1 # to avoid downloading 
