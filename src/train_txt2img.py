@@ -94,7 +94,10 @@ def train(cfg):
     )
 
     # load weights
-    if cfg.load_weight_from_checkpoint is not None:
+    if (
+        cfg.load_weight_from_checkpoint is not None
+        and not (Path(cfg.checkpoints.dirpath) / Path("last.ckpt")).exists()
+    ):
         print("loading weights from {}".format(cfg.load_weight_from_checkpoint))
         sd = torch.load(
             cfg.load_weight_from_checkpoint, map_location=torch.device("cpu")
